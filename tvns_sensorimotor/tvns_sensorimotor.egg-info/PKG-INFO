@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: tvns_sensorimotor
+Version: 1.0.0
+Summary: Analysis pipeline for the arousal-linked tVNS sensorimotor-adaptation study
+Requires-Python: >=3.9
+Requires-Dist: pandas>=1.3
+Requires-Dist: numpy>=1.21
+Requires-Dist: scipy>=1.7
+Requires-Dist: statsmodels>=0.13
+Requires-Dist: scikit-learn>=1.0
+Requires-Dist: matplotlib>=3.4
+Requires-Dist: mne>=1.0
