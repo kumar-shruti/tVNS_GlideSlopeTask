@@ -17,7 +17,7 @@ import traceback
 import pandas as pd
 
 from . import (config, prep, stats_behavior, stats_physio, cluster_permutation,
-              eeg, arousal, retention, figures)
+              eeg, arousal, retention, figures, influence)
 
 
 def _save_fig(fig, name, cfg):
@@ -34,7 +34,8 @@ def _save_table(df: pd.DataFrame, name, cfg):
 
 
 def run(save: bool = True, do_physio: bool = True, do_eeg: bool = True,
-        do_arousal: bool = True, do_retention: bool = True, do_cluster: bool = True) -> dict:
+        do_arousal: bool = True, do_retention: bool = True, do_cluster: bool = True,
+        do_influence: bool = True) -> dict:
     cfg = config.RunConfig(save_figures=save)
     out: dict = {}
 
@@ -69,6 +70,19 @@ def run(save: bool = True, do_physio: bool = True, do_eeg: bool = True,
                        "behavior_clusters", cfg)
         _save_fig(cluster_permutation.figure_cluster_overlay(trials, clusters),
                  "figure_behavior_clusters", cfg)
+
+    # ---- Influence (LOSO) on the behavioural LMMs + beta plots ------------- #
+    if do_influence:
+        print("[influence] leave-one-subject-out refits …")
+        inf = influence.run(trials, table1s={"RMSE_Needle": out["table1"],
+                                             "RMSE_Airspeed": out["table1_airspeed"]})
+        out["influence"] = inf
+        if save:
+            for name, df in influence.tables(inf).items():
+                _save_table(df, name, cfg)
+        _save_fig(inf["fig_block_betas"], "figure_lme_block_betas", cfg)
+        _save_fig(inf["fig_fixed_effects"], "figure_lme_fixed_effects", cfg)
+        _save_fig(inf["fig_influence"], "figure_influence", cfg)
 
     # ---- Retention (post-training DR days) — only needs the same CSV -------- #
     if do_retention:
@@ -151,10 +165,13 @@ def main(argv=None):
                     help="skip the post-training DR-day retention analysis")
     ap.add_argument("--no-cluster", action="store_true",
                     help="skip the behaviour cluster-permutation test")
+    ap.add_argument("--no-influence", action="store_true",
+                    help="skip the leave-one-subject-out influence analysis (~3-4 min)")
     ap.add_argument("--no-save", action="store_true")
     a = ap.parse_args(argv)
     run(save=not a.no_save, do_physio=a.all, do_eeg=a.all, do_arousal=a.all,
-        do_retention=not a.no_retention, do_cluster=not a.no_cluster)
+        do_retention=not a.no_retention, do_cluster=not a.no_cluster,
+        do_influence=not a.no_influence)
     return 0
 
 

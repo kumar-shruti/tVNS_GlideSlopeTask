@@ -387,6 +387,63 @@ def fit_overall_models(trials_df: pd.DataFrame,
 
 
 # --------------------------------------------------------------------------- #
+# Full three-way model                                                         #
+# --------------------------------------------------------------------------- #
+#   y_ij = b0 + b1 treatment_i + b2 trial_ij + b3 block_ij
+#          + b4 treatment_i:trial_ij + b5 treatment_i:block_ij + b6 trial_ij:block_ij
+#          + b7 treatment_i:trial_ij:block_ij + u0i + u1i block_ij + e_ij
+#
+# Same pooled frame as the ladder (trial_c, block_c centred). Not part of the
+# AIC/BIC ladder: it is the model of record, fit by REML for the fixed-effect
+# inference (ML is only needed when comparing fixed structures).
+FULL_MODEL_SPEC = {
+    "model": "M12_three_way_block_slope",
+    "description": "Treatment * Trial * Block (all 2- and 3-way interactions), "
+                   "random intercept + random slope on Block by subject",
+    "fixed": "treatment * trial_c * block_c",
+    "re_formula": "~block_c",
+}
+
+# beta index -> patsy term name for FULL_MODEL_SPEC
+FULL_MODEL_TERMS = {
+    "Intercept": "b0  Intercept",
+    "treatment[T.Stim]": "b1  Treatment (Stim − Sham)",
+    "trial_c": "b2  Trial",
+    "block_c": "b3  Block",
+    "treatment[T.Stim]:trial_c": "b4  Treatment × Trial",
+    "treatment[T.Stim]:block_c": "b5  Treatment × Block",
+    "trial_c:block_c": "b6  Trial × Block",
+    "treatment[T.Stim]:trial_c:block_c": "b7  Treatment × Trial × Block",
+}
+
+
+def fit_mixedlm(formula: str, data: pd.DataFrame, re_formula: str, reml: bool = True):
+    """Powell-optimised MixedLM grouped by subject; returns (fit, converged)."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        fit = smf.mixedlm(formula, data, groups=data["subject"],
+                          re_formula=re_formula).fit(
+            reml=reml, method="powell", maxiter=config.LMM_MAXITER, disp=False)
+    return fit, bool(getattr(fit, "converged", False))
+
+
+def fit_full_model(trials_df: pd.DataFrame, measure: str = "RMSE_Needle",
+                   reml: bool = config.REML):
+    """Fit `FULL_MODEL_SPEC`; return (coefficient table, fit). The table has
+    one row per fixed effect in b0..b7 order with beta, SE, 95% CI, z, p."""
+    d = _prep_overall_frame(trials_df, measure)
+    spec = FULL_MODEL_SPEC
+    fit, converged = fit_mixedlm(f"y ~ {spec['fixed']}", d, spec["re_formula"], reml)
+    tbl = tidy_mixedlm_coefficients(fit, spec["model"]).set_index("term")
+    tbl = tbl.loc[list(FULL_MODEL_TERMS)].reset_index()
+    tbl.insert(0, "measure", measure)
+    tbl.insert(3, "label", tbl["term"].map(FULL_MODEL_TERMS))
+    tbl["converged"] = converged
+    tbl["n_obs"], tbl["n_groups"] = len(d), d["subject"].nunique()
+    return tbl, fit
+
+
+# --------------------------------------------------------------------------- #
 # Baseline equivalence (Day 0)                                                 #
 # --------------------------------------------------------------------------- #
 def baseline_equivalence(trials_df: pd.DataFrame, measures=config.BEHAVIOR_MEASURES) -> pd.DataFrame:

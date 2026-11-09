@@ -14,10 +14,15 @@ from pathlib import Path
 # --------------------------------------------------------------------------- #
 # Paths                                                                        #
 # --------------------------------------------------------------------------- #
-# Default: the project folder that contains this package (…/AFRL tVNS).
-_DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2]
+_PERFORMANCE_CSV = "SDCP_flight-performance-metrics_2023-11-02.xlsx - Cohort2 (1).csv"
+# Default: the first of (project folder above the package, package root, the
+# package itself) that holds the performance CSV; falls back to the first.
+_HERE = Path(__file__).resolve()
+_CANDIDATE_DATA_DIRS = (_HERE.parents[2], _HERE.parents[1], _HERE.parent)
+_DEFAULT_DATA_DIR = next((d for d in _CANDIDATE_DATA_DIRS if (d / _PERFORMANCE_CSV).exists()),
+                         _CANDIDATE_DATA_DIRS[0])
 DATA_DIR = Path(os.environ.get("TVNS_DATA_DIR", _DEFAULT_DATA_DIR))
-OUT_DIR = Path(os.environ.get("TVNS_OUT_DIR", DATA_DIR / "tvns_sensorimotor" / "outputs"))
+OUT_DIR = Path(os.environ.get("TVNS_OUT_DIR", _HERE.parents[1] / "outputs"))
 
 
 @dataclass(frozen=True)
@@ -25,7 +30,7 @@ class DataPaths:
     """Resolved input files. Missing physio/EEG-feature tables are tolerated;
     the modules that need them raise a clear error only when actually called."""
 
-    performance: Path = DATA_DIR / "SDCP_flight-performance-metrics_2023-11-02.xlsx - Cohort2 (1).csv"
+    performance: Path = DATA_DIR / _PERFORMANCE_CSV
     # physio path in pkl
     physio: Path = DATA_DIR / "nn_data.pkl"
 

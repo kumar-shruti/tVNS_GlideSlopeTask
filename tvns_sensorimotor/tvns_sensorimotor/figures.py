@@ -29,11 +29,12 @@ def _block_boundaries(df: pd.DataFrame):
 # Figure 1 — learning curves                                                   #
 # --------------------------------------------------------------------------- #
 def figure1_learning_curves(trials_df: pd.DataFrame,
-                            measures=config.BEHAVIOR_MEASURES) -> plt.Figure:
+                            measures=config.BEHAVIOR_MEASURES,
+                            sharey: bool = True) -> plt.Figure:
     d = trials_df[trials_df["block"] > 0]
     bounds, centers, labels = _block_boundaries(trials_df)
     fig, axes = plt.subplots(1, len(measures), figsize=(6 * len(measures), 4.2),
-                             sharex=True)
+                             sharex=True, sharey=sharey)
     axes = np.atleast_1d(axes)
     for ax, m in zip(axes, measures):
         col = f"{m}_improve"
@@ -55,7 +56,8 @@ def figure1_learning_curves(trials_df: pd.DataFrame,
 
 
 def figure1_pct_learning_curves(trials_df: pd.DataFrame,
-                                measures=config.BEHAVIOR_MEASURES) -> plt.Figure:
+                                measures=config.BEHAVIOR_MEASURES,
+                                sharey: bool = True) -> plt.Figure:
     """Same view as `figure1_learning_curves`, in % improvement from baseline
     instead of raw units: ``(baseline - RMSE) / baseline * 100`` — positive =
     better than baseline, the same convention as
@@ -64,7 +66,7 @@ def figure1_pct_learning_curves(trials_df: pd.DataFrame,
     d = trials_df[trials_df["block"] > 0]
     bounds, centers, labels = _block_boundaries(trials_df)
     fig, axes = plt.subplots(1, len(measures), figsize=(6 * len(measures), 4.2),
-                             sharex=True)
+                             sharex=True, sharey=sharey)
     axes = np.atleast_1d(axes)
     for ax, m in zip(axes, measures):
         col = f"{m}_pct_change"

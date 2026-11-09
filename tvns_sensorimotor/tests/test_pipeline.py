@@ -7,7 +7,7 @@ tests skip when their inputs are absent.
 import pandas as pd
 import pytest
 
-from tvns_sensorimotor import config, prep, stats_behavior as sb, stats_physio as sp, retention, cluster_permutation as cp, figures
+from tvns_sensorimotor import influence, config, prep, stats_behavior as sb, stats_physio as sp, retention, cluster_permutation as cp, figures
 
 
 @pytest.fixture(scope="module")
@@ -199,3 +199,31 @@ def test_retention_figures_build(retention_df):
                retention.figure_retention_pct_change(retention_df, pct),
                retention.figure_retention_trajectory(retention_df)):
         assert fig.get_axes()
+
+
+def test_influence_leverage_sums_to_p(trials):
+    fits = influence._fit_block_mixed(trials, "RMSE_Needle")
+    lev = influence.subject_leverage(fits[1])
+    assert len(lev) == trials["subject"].nunique()
+    assert abs(lev.sum() - 4) < 0.05
+
+
+def test_influence_loso_overall_small(trials):
+    """LOSO on a subset of subjects (kept small for speed)."""
+    keep = sorted(trials["subject"].unique())[::4]   # 7 subjects
+    sub = trials[trials["subject"].isin(keep)]
+    loso, subj, summ, full, model = influence.loso_overall_model(
+        sub, "RMSE_Needle", model="M3_no_interaction")
+    assert len(subj) == len(keep)
+    assert (summ["n_refits"] == len(keep)).all()
+    assert (summ["beta_loso_min"] <= summ["beta_full"] + 1e-9).all()
+    assert (summ["beta_loso_max"] >= summ["beta_full"] - 1e-9).all()
+    for col in ("dfbetas", "sign_change", "sig_change"):
+        assert col in loso.columns
+
+
+def test_full_three_way_model(trials):
+    tbl, fit = sb.fit_full_model(trials, "RMSE_Needle")
+    assert list(tbl["term"]) == list(sb.FULL_MODEL_TERMS)   # b0..b7
+    assert tbl["converged"].all()
+    assert fit.cov_re.shape == (2, 2)                       # u0 + u1*block

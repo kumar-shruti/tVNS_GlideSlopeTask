@@ -15,9 +15,11 @@ python -m tvns_sensorimotor.run_all                # behaviour + cluster test + 
 python -m tvns_sensorimotor.run_all --all          # + physio, arousal, EEG
 python -m tvns_sensorimotor.run_all --no-retention # skip retention
 python -m tvns_sensorimotor.run_all --no-cluster   # skip the cluster-permutation test
+python -m tvns_sensorimotor.run_all --no-influence # skip the LOSO influence analysis (~3-4 min)
 
 python -m tvns_sensorimotor.retention              # just the retention (DR-day) analysis
 python -m tvns_sensorimotor.cluster_permutation    # just the behaviour cluster-permutation test
+python -m tvns_sensorimotor.influence              # just the LOSO influence analysis + LMM beta plots
 ```
 
 Outputs (CSV tables + SVG figures) land in `outputs/` (override with
@@ -36,9 +38,10 @@ a clear message until you point `config.DATA` at your copies.
 | `config` | paths, experiment constants, colours, **every checklist knob** |
 | `io` | load CSVs / pickle — no statistics, no Colab |
 | `prep` | block+trial labels, needle composite, baseline correction (B1), physio cleaning, arousal merge, missingness table (S12) |
-| `stats_behavior` | Table 1 (per-block LMM, full S2 columns, S1 Bonferroni) + Table 3 (independent-slope test, B10/B9) + baseline equivalence + `fit_overall_models` (AIC/BIC across a 9-spec pooled random/fixed-effects ladder) |
+| `stats_behavior` | Table 1 (per-block LMM, full S2 columns, S1 Bonferroni) + Table 3 (independent-slope test, B10/B9) + baseline equivalence + `fit_overall_models` (AIC/BIC across a 9-spec pooled random/fixed-effects ladder) + `fit_full_model` (the three-way treatment × trial × block model of record) |
 | `stats_physio` | Table 2 (B6 model form, S4 log-RMSSD + sensitivity), pupil-direction interpreter (B4), 1-D cluster test |
 | `cluster_permutation` | 1-D cluster-permutation test (Stim vs Sham) on RMSE_Needle / RMSE_Airspeed across the training trial axis, honest cluster summary + overlay figure, plus raw uncorrected per-trial Welch t-tests (`pointwise_ttests`) for inspection |
+| `influence` | leave-one-subject-out influence analysis of the behavioural LMMs (Table 1 per-block models and the pooled three-way model `FULL_MODEL_SPEC`: y ~ treatment × trial × block + (1 + block | subject), REML): DFBETAS (2/√n), Cook's D (4/n, 1), sign / significance changes, subject leverage (2p/n), LOSO β range; plus β-coefficient plots (per-block, and a dot-and-whisker plot of all 8 fixed effects of the three-way model) with 95% CI and LOSO range |
 | `eeg` | Welch band power, spatio-temporal cluster permutation, honest cluster summary (B5, B7, M1) |
 | `arousal` | within-subject PCA arousal latent variable → learning (Figure 4) |
 | `retention` | post-training retention: raw scores and % improvement from baseline at each DR day (Stim vs Sham, S11), plus the full D00→D04→DR trajectory |
